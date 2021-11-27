@@ -1,0 +1,63 @@
+#!/bin/sh
+set -ue
+
+# Assumption: VirtualBox as a VM engine
+
+DOCKER_USER="root"
+DOCKER_VM_NAME="docker"
+DOCKER_ROOT="/dockerhome"
+
+alias is_vm_running='VBoxManage showvminfo $DOCKER_VM_NAME | grep -q running'
+
+alias vm_ssh='ssh "$DOCKER_USER@$(vm_get_ip)"'
+
+vm_get_ip() {
+    # this is a hack: relies on the interface order.
+    # TODO: Need to find a way to make it independent of guest interfaces order
+    VBoxManage guestproperty enumerate "$DOCKER_VM_NAME" |
+        grep 'Net/0/V4/IP' |
+        grep -E -o 'value: .*?,' |
+        tr -d ':, [:alpha:]'
+}
+
+vm_start() {
+    if is_vm_running ; then
+       exit 0
+    fi
+
+    exec VBoxHeadless -s "$DOCKER_VM_NAME"
+}
+
+vm_stop() {
+    exec VBoxManage controlvm "$DOCKER_VM_NAME" acpipowerbutton
+}
+
+vm_install() {
+    mkdir "$DOCKER_ROOT"
+
+    cp /etc/fstab ./fstab.old
+    echo "share           $DOCKER_HOME     vboxsf  defaults        0       0" >> /etc/fstab
+}
+
+die() {
+    msg="$1"
+    code="${2-1}"  # default exit status 1
+    echo "$msg" && exit "$code"
+}
+
+autocomplete() {
+    grep -E '# subcommand$' "$0" | sed -E s'/\).*$//g' | tr -d " " | sort
+}
+
+CMD=${1:-""}
+shift   # rest of the args can be used further
+
+case "$CMD" in
+    autocomplete    ) autocomplete ;;               # subcommand
+    install         ) vm_install ;;                 # subcommand
+    ip              ) vm_get_ip ;;                  # subcommand
+    start           ) vm_start ;;                   # subcommand
+    stop            ) vm_stop ;;                    # subcommand
+    ssh             ) vm_ssh "$@" ;;                # subcommand
+    *               ) die "Unknown commad: $CMD" ;;
+esac

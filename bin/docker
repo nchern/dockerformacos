@@ -1,0 +1,27 @@
+#!/bin/sh
+set -ue
+
+DOCKER_USER="root"
+DOCKER_HOST="$(docker-vm ip)"
+
+PWD=$(pwd)
+
+DOCKER_ROOT="/dockerhome"
+# escape spaces in path
+DOCKER_CUR_DIR=$(echo "$DOCKER_ROOT$PWD" | sed s'+ +\\ +g')
+
+CMD="cd $DOCKER_CUR_DIR && docker"
+
+prev_arg=""
+for arg in "$@"
+do
+    # in case of volume mapping override local pathes
+    # TODO: refine according docker docs - this won't work in all cases of mappings.
+    case "$prev_arg" in
+        "-v" ) arg="$DOCKER_ROOT$arg" ;;
+    esac
+    prev_arg="$arg"
+    CMD="$CMD \"$arg\""
+done
+
+ssh -tt -o "LogLevel=QUIET" "$DOCKER_USER@$DOCKER_HOST" $CMD
