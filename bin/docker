@@ -27,7 +27,7 @@ do
     esac
     case "$arg" in
         # in case docker was asked to allocate a TTY, ask ssh to do it as well
-        -it|-ti|--tty* ) SSH_OPTS="$SSH_OPTS -tt" ;;
+        -it|-ti|-t|--tty* ) SSH_OPTS="$SSH_OPTS -tt" ;;
     esac
     prev_arg="$arg"
     SSH_CMD="$SSH_CMD \"$arg\""
