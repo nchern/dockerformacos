@@ -12,7 +12,7 @@ alias is_vm_running='VBoxManage showvminfo $DOCKER_VM_NAME | grep -q running'
 alias vm_ssh='ssh "$DOCKER_USER@$(vm_get_ip)"'
 
 vm_get_ip() {
-    # this is a hack: relies on the interface order.
+    # HACK: relies on the interface order.
     # TODO: Need to find a way to make it independent of guest interfaces order
     VBoxManage guestproperty enumerate "$DOCKER_VM_NAME" |
         grep 'Net/0/V4/IP' |

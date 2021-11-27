@@ -14,7 +14,8 @@ PWD=$(pwd)
 
 DOCKER_CUR_DIR=$(escape_path "$DOCKER_ROOT$PWD")
 
-CMD="cd $DOCKER_CUR_DIR && docker"
+SSH_OPTS=""
+SSH_CMD="cd $DOCKER_CUR_DIR && docker"
 
 prev_arg=""
 for arg in "$@"
@@ -24,7 +25,13 @@ do
     case "$prev_arg" in
         "-v" ) arg="$DOCKER_ROOT$arg" ;;
     esac
+    case "$arg" in
+        # in case docker was asked to allocate a TTY, ask ssh to do it as well
+        -it|-ti|--tty* ) SSH_OPTS="$SSH_OPTS -tt" ;;
+    esac
     prev_arg="$arg"
-    CMD="$CMD \"$arg\""
+    SSH_CMD="$SSH_CMD \"$arg\""
 done
-ssh -tt -o "LogLevel=QUIET" "$DOCKER_USER@$DOCKER_HOST" $CMD
+
+# shellcheck disable=SC2086,SC2090
+exec ssh $SSH_OPTS -o "LogLevel=QUIET" "$DOCKER_USER@$DOCKER_HOST" $SSH_CMD
