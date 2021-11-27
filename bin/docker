@@ -3,12 +3,16 @@ set -ue
 
 DOCKER_USER="root"
 DOCKER_HOST="$(docker-vm ip)"
+DOCKER_ROOT="/dockerhome"
+
+escape_path() {
+    # escape spaces in path
+    echo "$1" | sed s'+ +\\ +g'
+}
 
 PWD=$(pwd)
 
-DOCKER_ROOT="/dockerhome"
-# escape spaces in path
-DOCKER_CUR_DIR=$(echo "$DOCKER_ROOT$PWD" | sed s'+ +\\ +g')
+DOCKER_CUR_DIR=$(escape_path "$DOCKER_ROOT$PWD")
 
 CMD="cd $DOCKER_CUR_DIR && docker"
 
@@ -23,5 +27,4 @@ do
     prev_arg="$arg"
     CMD="$CMD \"$arg\""
 done
-
 ssh -tt -o "LogLevel=QUIET" "$DOCKER_USER@$DOCKER_HOST" $CMD
