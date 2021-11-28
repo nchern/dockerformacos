@@ -4,9 +4,7 @@
 vi /etc/apk/repositories 
 
 apk update
-apk add docker \
-	virtualbox-guest-additions \
-	bash
+apk add docker virtualbox-guest-additions
 
 # enable vbox guest additions service
 rc-update add virtualbox-guest-additions
