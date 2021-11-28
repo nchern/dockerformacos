@@ -10,6 +10,17 @@ escape_path() {
     echo "$1" | sed s'+ +\\ +g'
 }
 
+process_volume_mount_value() {
+    val="$1"
+    case "$val" in /* )
+        # add prefix if host volume part is path
+        echo "$DOCKER_ROOT$val"
+        return
+        ;;
+    esac
+    echo "$val"
+}
+
 PWD=$(pwd)
 
 DOCKER_CUR_DIR=$(escape_path "$DOCKER_ROOT$PWD")
@@ -23,7 +34,7 @@ do
     # in case of volume mapping override local pathes
     # TODO: refine according docker docs - this won't work in all cases of mappings.
     case "$prev_arg" in
-        "-v" ) arg="$DOCKER_ROOT$arg" ;;
+        "-v" ) arg=$(process_volume_mount_value "$arg") ;;
     esac
     case "$arg" in
         # in case docker was asked to allocate a TTY, ask ssh to do it as well
