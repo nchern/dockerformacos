@@ -1,8 +1,6 @@
 #!/bin/sh
 set -ue
 
-DOCKER_USER="root"
-DOCKER_HOST="$(docker-vm ip)"
 DOCKER_ROOT="/dockerhome"
 
 escape_path() {
@@ -25,7 +23,7 @@ PWD=$(pwd)
 
 DOCKER_CUR_DIR=$(escape_path "$DOCKER_ROOT$PWD")
 
-SSH_OPTS=""
+export SSH_OPTS="-o LogLevel=QUIET"
 SSH_CMD="cd $DOCKER_CUR_DIR && docker"
 
 prev_arg=""
@@ -45,4 +43,4 @@ do
 done
 
 # shellcheck disable=SC2086,SC2090
-exec ssh $SSH_OPTS -o "LogLevel=QUIET" "$DOCKER_USER@$DOCKER_HOST" $SSH_CMD
+exec docker-vm ssh $SSH_CMD

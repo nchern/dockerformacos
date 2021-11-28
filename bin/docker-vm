@@ -7,9 +7,13 @@ DOCKER_USER="root"
 DOCKER_VM_NAME="docker"
 DOCKER_ROOT="/dockerhome"
 
+SSH_OPTS=${SSH_OPTS:-""}
+
 alias is_vm_running='VBoxManage showvminfo $DOCKER_VM_NAME | grep -q running'
 
-alias vm_ssh='ssh "$DOCKER_USER@$(vm_get_ip)"'
+vm_ssh() {
+    ssh $SSH_OPTS "$DOCKER_USER@$(vm_get_ip)" "$@"
+}
 
 vm_get_ip() {
     # HACK: relies on the interface order.
