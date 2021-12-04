@@ -37,6 +37,9 @@ vm_stop() {
 }
 
 vm_install() {
+    die "Not implemented"
+
+    # TODO: refine
     mkdir "$DOCKER_ROOT"
 
     cp /etc/fstab ./fstab.old
