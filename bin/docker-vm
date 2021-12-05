@@ -1,18 +1,31 @@
 #!/bin/sh
 set -ue
+set -x
 
 # Assumption: VirtualBox as a VM engine
 
+APP_HOME="$HOME/.docker-vm"
+
 DOCKER_USER="root"
-DOCKER_VM_NAME="docker"
 DOCKER_ROOT="/dockerhome"
+DOCKER_SHARE_NAME=$(echo $DOCKER_ROOT | tr -d '/')
+DOCKER_VM_NAME=${DOCKER_VM_NAME:-"docker"}
+
+DOCKER_VM_HOME="$APP_HOME/$DOCKER_VM_NAME"
+DOCKER_VM_SSH_PRIVATE_KEY="$DOCKER_VM_HOME/id_rsa"
+DOCKER_VM_SSH_PUBLIC_KEY="${DOCKER_VM_SSH_PRIVATE_KEY}.pub"
 
 SSH_OPTS=${SSH_OPTS:-""}
 
 alias is_vm_running='VBoxManage showvminfo $DOCKER_VM_NAME | grep -q running'
 
 vm_ssh() {
-    ssh $SSH_OPTS "$DOCKER_USER@$(vm_get_ip)" "$@"
+    IP="${DOCKER_IP:-$(vm_get_ip)}"
+    [ -z "$IP" ] && die "$DOCKER_VM_NAME ip not found"
+    if [ -f "$DOCKER_VM_SSH_PRIVATE_KEY" ]; then
+        SSH_OPTS="$SSH_OPTS -i $DOCKER_VM_SSH_PRIVATE_KEY"
+    fi
+    ssh $SSH_OPTS "$DOCKER_USER@$IP" "$@"
 }
 
 vm_get_ip() {
@@ -24,9 +37,38 @@ vm_get_ip() {
         tr -d ':, [:alpha:]'
 }
 
+vm_create() {
+    # TODO: add machine creation
+    # VM must be turned off
+    is_vm_running && die "$DOCKER_VM_NAME must be turned off to enable sharing"
+    VBoxManage sharedfolder add "$DOCKER_VM_NAME" --name "$DOCKER_SHARE_NAME" -hostpath / || true
+}
+
+vm_init() {
+    DOCKER_IP="$1"  # IP must be provided externally before guests additions installed
+    [ ! -f "$DOCKER_VM_SSH_PRIVATE_KEY" ] &&
+        echo | ssh-keygen -f "$DOCKER_VM_SSH_PRIVATE_KEY" &&
+
+    # ensure SSH keys are secured so ssh client is happy
+    chmod 600 $DOCKER_VM_SSH_PRIVATE_KEY*
+
+    INIT_CMD="mkdir -p $DOCKER_ROOT"
+    INIT_CMD="$INIT_CMD && mkdir -p /root/.ssh/"
+    INIT_CMD="$INIT_CMD && echo 'Welcome to the Docker host' > /etc/motd"
+    INIT_CMD="$INIT_CMD && cp /etc/fstab ./fstab.old"
+    INIT_CMD="$INIT_CMD && echo '$DOCKER_SHARE_NAME $DOCKER_ROOT vboxsf defaults 0 0' >> /etc/fstab"
+    # remount all fstab after adding DOCKER_ROOT mount
+    INIT_CMD="$INIT_CMD && mount -a"
+    vm_ssh "$INIT_CMD"
+
+    vm_ssh "sh -c 'cat > /root/.ssh/authorized_keys' && chmod -R 600 /root/.ssh" < "$DOCKER_VM_SSH_PUBLIC_KEY"
+    cat "$(dirname $0)/../alpine-install-pkg.sh" | vm_ssh sh
+}
+
 vm_start() {
     if is_vm_running ; then
-       exit 0
+        echo "$DOCKER_VM_NAME is already running"
+        exit 0
     fi
 
     exec VBoxHeadless -s "$DOCKER_VM_NAME"
@@ -36,20 +78,10 @@ vm_stop() {
     exec VBoxManage controlvm "$DOCKER_VM_NAME" acpipowerbutton
 }
 
-vm_install() {
-    die "Not implemented"
-
-    # TODO: refine
-    mkdir "$DOCKER_ROOT"
-
-    cp /etc/fstab ./fstab.old
-    echo "share           $DOCKER_HOME     vboxsf  defaults        0       0" >> /etc/fstab
-}
-
 die() {
     msg="$1"
     code="${2-1}"  # default exit status 1
-    echo "$msg" && exit "$code"
+    echo "fatal: $msg" && exit "$code"
 }
 
 autocomplete() {
@@ -59,9 +91,12 @@ autocomplete() {
 CMD=${1:-""}
 shift   # rest of the args can be used further
 
+mkdir -p "$DOCKER_VM_HOME"
+
 case "$CMD" in
     autocomplete    ) autocomplete ;;               # subcommand
-    install         ) vm_install ;;                 # subcommand
+    create          ) vm_create ;;                  # subcommand
+    init            ) vm_init "$1" ;;               # subcommand
     ip              ) vm_get_ip ;;                  # subcommand
     start           ) vm_start ;;                   # subcommand
     stop            ) vm_stop ;;                    # subcommand
