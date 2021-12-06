@@ -1,6 +1,5 @@
 #!/bin/sh
 set -ue
-set -x
 
 # Assumption: VirtualBox as a VM engine
 
