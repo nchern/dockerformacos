@@ -16,7 +16,7 @@ DOCKER_VM_SSH_PUBLIC_KEY="${DOCKER_VM_SSH_PRIVATE_KEY}.pub"
 
 SSH_OPTS=${SSH_OPTS:-""}
 
-alias is_vm_running='VBoxManage showvminfo $DOCKER_VM_NAME | grep -q running'
+alias is_vm_running='VBoxManage showvminfo $DOCKER_VM_NAME | grep -E -q running'
 
 vm_ssh() {
     IP="${DOCKER_IP:-$(vm_get_ip)}"
@@ -77,6 +77,14 @@ vm_stop() {
     exec VBoxManage controlvm "$DOCKER_VM_NAME" acpipowerbutton
 }
 
+vm_status() {
+    exec VBoxManage showvminfo "$DOCKER_VM_NAME" | grep -F State:
+}
+
+vm_poweroff() {
+    exec VBoxManage controlvm "$DOCKER_VM_NAME" poweroff
+}
+
 die() {
     msg="$1"
     code="${2-1}"  # default exit status 1
@@ -88,7 +96,7 @@ autocomplete() {
 }
 
 CMD=${1:-""}
-shift   # rest of the args can be used further
+shift   # the rest of the args can be used further
 
 mkdir -p "$DOCKER_VM_HOME"
 
@@ -97,7 +105,9 @@ case "$CMD" in
     create          ) vm_create ;;                  # subcommand
     init            ) vm_init "$1" ;;               # subcommand
     ip              ) vm_get_ip ;;                  # subcommand
+    poweroff        ) vm_poweroff ;;                # subcommand
     start           ) vm_start ;;                   # subcommand
+    status          ) vm_status ;;                  # subcommand
     stop            ) vm_stop ;;                    # subcommand
     ssh             ) vm_ssh "$@" ;;                # subcommand
     *               ) die "Unknown commad: $CMD" ;;
