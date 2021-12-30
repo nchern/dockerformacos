@@ -8,8 +8,8 @@ APP_HOME="$HOME/.docker-vm"
 DOCKER_USER="root"
 DOCKER_ROOT="/dockerhome"
 DOCKER_SHARE_NAME=$(echo $DOCKER_ROOT | tr -d '/')
-DOCKER_VM_NAME=${DOCKER_VM_NAME:-"docker"}
 
+DOCKER_VM_NAME=${DOCKER_VM_NAME:-"docker"}
 DOCKER_VM_HOME="$APP_HOME/$DOCKER_VM_NAME"
 DOCKER_VM_SSH_PRIVATE_KEY="$DOCKER_VM_HOME/id_rsa"
 DOCKER_VM_SSH_PUBLIC_KEY="${DOCKER_VM_SSH_PRIVATE_KEY}.pub"
@@ -54,14 +54,20 @@ vm_init() {
     INIT_CMD="mkdir -p $DOCKER_ROOT"
     INIT_CMD="$INIT_CMD && mkdir -p /root/.ssh/"
     INIT_CMD="$INIT_CMD && echo 'Welcome to the Docker host' > /etc/motd"
-    INIT_CMD="$INIT_CMD && cp /etc/fstab ./fstab.old"
+    # setup fstab to automaunt host shared folder
+    INIT_CMD="$INIT_CMD && cp /etc/fstab ./fstab.orig"
     INIT_CMD="$INIT_CMD && echo '$DOCKER_SHARE_NAME $DOCKER_ROOT vboxsf defaults 0 0' >> /etc/fstab"
+    # do not wait before booting OS
+    INIT_CMD="$INIT_CMD && echo TIMEOUT 30 | sed -i.orig 's/TIMEOUT [0-9]\+/TIMEOUT 1/g' /boot/extlinux.conf"
     # remount all fstab after adding DOCKER_ROOT mount
     INIT_CMD="$INIT_CMD && mount -a"
     vm_ssh "$INIT_CMD"
 
+    # make root accessible via ssh
     vm_ssh "sh -c 'cat > /root/.ssh/authorized_keys' && chmod -R 600 /root/.ssh" < "$DOCKER_VM_SSH_PUBLIC_KEY"
-    cat "$(dirname $0)/../alpine-install-pkg.sh" | vm_ssh sh
+
+    # install required packages
+    vm_ssh sh < "$(dirname "$0")/../alpine-install-pkg.sh"
 }
 
 vm_start() {
