@@ -76,7 +76,7 @@ vm_start() {
         exit 0
     fi
 
-    exec VBoxHeadless -s "$DOCKER_VM_NAME"
+    exec VBoxManage startvm "$DOCKER_VM_NAME" --type headless
 }
 
 vm_stop() {
