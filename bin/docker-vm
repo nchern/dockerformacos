@@ -24,7 +24,7 @@ vm_ssh() {
     if [ -f "$DOCKER_VM_SSH_PRIVATE_KEY" ]; then
         SSH_OPTS="$SSH_OPTS -i $DOCKER_VM_SSH_PRIVATE_KEY"
     fi
-    ssh $SSH_OPTS "$DOCKER_USER@$IP" "$@"
+    ssh -o ConnectTimeout=3 $SSH_OPTS "$DOCKER_USER@$IP" "$@"
 }
 
 vm_get_ip() {
