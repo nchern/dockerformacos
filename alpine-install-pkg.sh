@@ -10,7 +10,7 @@ apk add docker virtualbox-guest-additions
 # enable and start services
 for svc in virtualbox-guest-additions docker
 do
-    rc-service "$svc" add
+    rc-update add "$svc"
     rc-service "$svc" start
 done
 rc-status
