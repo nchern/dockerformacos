@@ -24,11 +24,14 @@ vm_ssh() {
     if [ -f "$DOCKER_VM_SSH_PRIVATE_KEY" ]; then
         SSH_OPTS="$SSH_OPTS -i $DOCKER_VM_SSH_PRIVATE_KEY"
     fi
-    ssh -o ConnectTimeout=3 $SSH_OPTS "$DOCKER_USER@$IP" "$@"
+    # We _want_ SSH_OPTS to be globbed and split into multiple options
+    # shellcheck disable=SC2086
+    ssh -o ConnectTimeout=3 -o StrictHostKeyChecking=no $SSH_OPTS "$DOCKER_USER@$IP" "$@"
 }
 
 vm_get_ip() {
-    # HACK: relies on the interface order.
+    # HACK: relies on the interface order:
+    # - assumes that the 1st interface is the shared interface between host and docker guest
     # TODO: Need to find a way to make it independent of guest interfaces order
     VBoxManage guestproperty enumerate "$DOCKER_VM_NAME" |
         grep 'Net/0/V4/IP' |
