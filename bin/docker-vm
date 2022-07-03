@@ -104,6 +104,17 @@ autocomplete() {
     grep -E '# subcommand$' "$0" | sed -E s'/\).*$//g' | tr -d " " | sort
 }
 
+help() {
+    cmd=$(basename "$0")
+    echo "$cmd: controls docker virtual machine. Part of Docker for MacOS."
+    echo ""
+    echo "Usage:"
+    echo "  $cmd [command]"
+    echo ""
+    echo "Available commands:"
+    autocomplete | xargs -n1 echo "    "
+}
+
 CMD=${1:-""}
 shift   # the rest of the args can be used further
 
@@ -119,5 +130,6 @@ case "$CMD" in
     status          ) vm_status ;;                  # subcommand
     stop            ) vm_stop ;;                    # subcommand
     ssh             ) vm_ssh "$@" ;;                # subcommand
+    help|-h|--help  ) help "$@" ;; 
     *               ) die "Unknown commad: $CMD" ;;
 esac
